@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../app/store';
 import { updateNodeText, removeNode } from '../features/diagram/diagramSlice';
@@ -10,22 +10,8 @@ export const Canvas: React.FC = () => {
   const [editingNode, setEditingNode] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const nodeGap = 50;
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Backspace' && selectedNode) {
-        dispatch(removeNode(selectedNode));
-        setSelectedNode(null);
-        if (editingNode === selectedNode) {
-          setEditingNode(null);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNode, dispatch, editingNode]);
 
   const handleNodeClick = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,6 +60,30 @@ export const Canvas: React.FC = () => {
     );
   };
 
+  const renderDeleteButton = (nodeId: string) => {
+    return (
+      <g
+        onClick={(e) => {
+          e.stopPropagation();
+          dispatch(removeNode(nodeId));
+        }}
+        style={{ cursor: 'pointer', opacity: hoveredNode === nodeId ? 1 : 0 }}
+      >
+        <text
+          x={135} // Right-aligned
+          y={20} // Top-aligned
+          textAnchor="middle"
+          fill="#666"
+          fontSize="16"
+          fontWeight="bold"
+          style={{ userSelect: 'none' }}
+        >
+          x
+        </text>
+      </g>
+    );
+  };
+
   const renderNode = (node: Node, index: number) => {
     const xPosition = calculateNodePosition(index);
     const { shape, text, id } = node;
@@ -81,7 +91,12 @@ export const Canvas: React.FC = () => {
     const isSelected = selectedNode === id;
 
     return (
-      <g key={id} transform={`translate(${xPosition}, ${nodeGap})`}>
+      <g
+        key={id}
+        transform={`translate(${xPosition}, ${nodeGap})`}
+        onMouseEnter={() => setHoveredNode(id)}
+        onMouseLeave={() => setHoveredNode(null)}
+      >
         {/* Rectangle with selection highlight */}
         <rect
           width={width}
@@ -94,6 +109,8 @@ export const Canvas: React.FC = () => {
           onClick={(e) => handleNodeClick(id, e)}
           style={{ cursor: 'pointer' }}
         />
+
+        {renderDeleteButton(id)}
 
         {/* Text content */}
         {editingNode === id ? (
@@ -153,7 +170,7 @@ export const Canvas: React.FC = () => {
       height="100%"
       style={{
         backgroundColor: '#f8f9fa',
-        overflow: 'visible',
+        overflow: 'auto',
       }}
       onClick={handleCanvasClick}
     >
